@@ -1,0 +1,486 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indian Stock Monitor - Advanced</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+        .chart-container {
+            max-width: 100%;
+            height: 450px;
+        }
+        .glow {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
+        }
+        .card {
+            background: #2d3748;
+            border-radius: 1rem;
+            padding: 2rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+        .btn {
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+        }
+        .range-btn.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .animate-slide-in {
+            animation: slideIn 0.5s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <header class="bg-gray-900 p-4 shadow-lg sticky top-0 z-10">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-blue-400">Indian Stock Monitor</h1>
+            <nav>
+                <a href="#" class="text-gray-300 hover:text-blue-400 mx-4">Home</a>
+                <a href="#" class="text-gray-300 hover:text-blue-400 mx-4">Watchlist</a>
+                <a href="#" class="text-gray-300 hover:text-blue-400 mx-4">Portfolio</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-6">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Stock Overview -->
+            <div class="lg:col-span-3">
+                <div class="card glow animate-slide-in">
+                    <h2 class="text-2xl font-semibold mb-4">Reliance Industries (RELIANCE.NS)</h2>
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <p class="text-5xl font-bold" id="currentPrice">₹--</p>
+                            <p class="text-xl" id="priceChange">-- (--%)</p>
+                        </div>
+                        <div class="text-right">
+                            <p>Market Status: <span id="marketStatus" class="font-semibold">--</span></p>
+                            <p>Updated: <span id="lastUpdated">--</span></p>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2 mb-4">
+                        <button class="range-btn btn px-4 py-2 bg-gray-700 rounded active" data-range="1D">1D</button>
+                        <button class="range-btn btn px-4 py-2 bg-gray-700 rounded" data-range="5D">5D</button>
+                        <button class="range-btn btn px-4 py-2 bg-gray-700 rounded" data-range="1M">1M</button>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="priceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Metrics -->
+            <div class="card glow animate-slide-in">
+                <h2 class="text-xl font-semibold mb-4">Key Metrics</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-gray-400">Open</p>
+                        <p class="text-lg font-semibold" id="openPrice">--</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400">High</p>
+                        <p class="text-lg font-semibold" id="dayHigh">--</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400">Low</p>
+                        <p class=");
+                        <p class="text-lg font-semibold" id="dayLow">--</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400">Volume</p>
+                        <p class="text-lg font-semibold" id="volume">--</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400">Market Cap</p>
+                        <p class="text-lg font-semibold" id="marketCap">--</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400">P/E Ratio</p>
+                        <p class="text-lg font-semibold" id="peRatio">--</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400">52W High</p>
+                        <p class="text-lg font-semibold" id="fiftyTwoWeekHigh">--</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400">52W Low</p>
+                        <p class="text-lg font-semibold" id="fiftyTwoWeekLow">--</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Watchlist -->
+            <div class="card glow animate-slide-in">
+                <h2 class="text-xl font-semibold mb-4">Watchlist</h2>
+                <div id="watchlist" class="space-y-4">
+                    <div class="flex justify-between items-center" data-ticker="RELIANCE.NS">
+                        <p>RELIANCE.NS</p>
+                        <div class="flex items-center space-x-2">
+                            <p id="watchlistPrice-RELIANCE.NS">--</p>
+                            <button class="remove-ticker text-red-400 hover:text-red-600" data-ticker="RELIANCE.NS">✕</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <input type="text" id="newTicker" placeholder="Add ticker (e.g., TCS.NS)" class="w-full p-2 bg-gray-700 text-white rounded mb-2">
+                    <button id="addTicker" class="btn w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded">Add to Watchlist</button>
+                </div>
+            </div>
+
+            <!-- Portfolio Tracker -->
+            <div class="lg:col-span-2 card glow animate-slide-in">
+                <h2 class="text-xl font-semibold mb-4">Portfolio Tracker</h2>
+                <div id="portfolio" class="space-y-4">
+                    <!-- Portfolio items will be populated here -->
+                </div>
+                <div class="mt-6 grid grid-cols-2 gap-4">
+                    <div>
+                        <input type="text" id="portfolioTicker" placeholder="Ticker (e.g., RELIANCE.NS)" class="w-full p-2 bg-gray-700 text-white rounded mb-2">
+                        <input type="number" id="portfolioShares" placeholder="Shares" class="w-full p-2 bg-gray-700 text-white rounded mb-2">
+                        <input type="number" id="portfolioPrice" placeholder="Buy Price" class="w-full p-2 bg-gray-700 text-white rounded mb-2">
+                        <button id="buyStock" class="btn w-full bg-green-600 hover:bg-green-700 text-white p-2 rounded">Buy</button>
+                    </div>
+                    <div>
+                        <input type="text" id="sellTicker" placeholder="Ticker" class="w-full p-2 bg-gray-700 text-white rounded mb-2">
+                        <input type="number" id="sellShares" placeholder="Shares" class="w-full p-2 bg-gray-700 text-white rounded mb-2">
+                        <button id="sellStock" class="btn w-full bg-red-600 hover:bg-red-700 text-white p-2 rounded">Sell</button>
+                    </div>
+                </div>
+                <p class="mt-4">Total Value: <span id="portfolioValue" class="font-semibold">₹0</span></p>
+            </div>
+
+            <!-- News Section -->
+            <div class="lg:col-span-2 card glow animate-slide-in">
+                <h2 class="text-xl font-semibold mb-4">Latest News</h2>
+                <div id="newsFeed" class="space-y-4">
+                    <!-- News items will be populated here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-gray-900 p-4 mt-8">
+        <div class="container mx-auto text-center">
+            <p class="text-gray-400">© 2025 Indian Stock Monitor. Powered by Yahoo Finance API.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Yahoo Finance API endpoint
+        const API_URL = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=';
+        let chart;
+        let portfolio = [];
+        let watchlist = ['RELIANCE.NS'];
+        let priceHistory = { '1D': [], '5D': [], '1M': [] };
+        let currentRange = '1D';
+
+        // Fetch stock data
+        async function fetchStockData(symbols) {
+            try {
+                const response = await fetch(`${API_URL}${symbols}`);
+                const data = await response.json();
+                return data.quoteResponse.result;
+            } catch (error) {
+                console.error('Error fetching stock data:', error);
+                return null;
+            }
+        }
+
+        // Update UI with stock data
+        function updateStockUI(data) {
+            if (!data || !data[0]) return;
+
+            const quote = data[0];
+            const price = quote.regularMarketPrice.toFixed(2);
+            const change = quote.regularMarketChange.toFixed(2);
+            const changePercent = quote.regularMarketChangePercent.toFixed(2);
+            const isPositive = change >= 0;
+
+            document.getElementById('currentPrice').textContent = `₹${price}`;
+            document.getElementById('priceChange').textContent = `${isPositive ? '+' : ''}${change} (${isPositive ? '+' : ''}${changePercent}%)`;
+            document.getElementById('priceChange').className = isPositive ? 'text-green-500' : 'text-red-500';
+            document.getElementById('marketStatus').textContent = quote.marketState;
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+            document.getElementById('openPrice').textContent = `₹${quote.regularMarketOpen.toFixed(2)}`;
+            document.getElementById('dayHigh').textContent = `₹${quote.regularMarketDayHigh.toFixed(2)}`;
+            document.getElementById('dayLow').textContent = `₹${quote.regularMarketDayLow.toFixed(2)}`;
+            document.getElementById('volume').textContent = quote.regularMarketVolume.toLocaleString();
+            document.getElementById('marketCap').textContent = `₹${(quote.marketCap / 1e7).toFixed(2)} Cr`;
+            document.getElementById('peRatio').textContent = quote.trailingPE ? quote.trailingPE.toFixed(2) : '--';
+            document.getElementById('fiftyTwoWeekHigh').textContent = `₹${quote.fiftyTwoWeekHigh.toFixed(2)}`;
+            document.getElementById('fiftyTwoWeekLow').textContent = `₹${quote.fiftyTwoWeekLow.toFixed(2)}`;
+            document.getElementById(`watchlistPrice-${quote.symbol}`).textContent = `₹${price}`;
+        }
+
+        // Initialize Chart
+        function initChart() {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Stock Price (₹)',
+                        data: [],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { display: true, title: { display: true, text: 'Time' } },
+                        y: { display: true, title: { display: true, text: 'Price (₹)' } }
+                    },
+                    plugins: {
+                        legend: { display: true, position: 'top' }
+                    }
+                }
+            });
+        }
+
+        // Update Chart
+        function updateChart(price, range) {
+            const now = new Date();
+            priceHistory[range].push({ time: now, price });
+
+            // Simulate historical data for different ranges
+            if (range === '5D') priceHistory[range] = priceHistory[range].slice(-120); // 120 points for 5 days
+            else if (range === '1M') priceHistory[range] = priceHistory[range].slice(-720); // 720 points for 1 month
+            else priceHistory[range] = priceHistory[range].slice(-60); // 60 points for 1 day
+
+            chart.data.labels = priceHistory[range].map(d => d.time.toLocaleTimeString());
+            chart.data.datasets[0].data = priceHistory[range].map(d => d.price);
+            chart.update();
+        }
+
+        // Simulate WebSocket for real-time updates
+        function simulateWebSocket() {
+            setInterval(async () => {
+                const data = await fetchStockData('RELIANCE.NS');
+                if (data && data[0]) {
+                    updateStockUI(data);
+                    updateChart(data[0].regularMarketPrice, currentRange);
+                    updatePortfolioValue();
+                    updateWatchlistPrices();
+                }
+            }, 5000); // Update every 5 seconds
+        }
+
+        // Update News (placeholder)
+        function updateNews() {
+            const newsFeed = document.getElementById('newsFeed');
+            newsFeed.innerHTML = `
+                <div class="animate-slide-in">
+                    <p class="font-semibold">Reliance Industries Q3 Results</p>
+                    <p class="text-gray-400">Reliance reports strong growth in digital services...</p>
+                </div>
+                <div class="animate-slide-in">
+                    <p class="font-semibold">Market Update</p>
+                    <p class="text-gray-400">NSE sees bullish trend in energy sector...</p>
+                </div>
+                <div class="animate-slide-in">
+                    <p class="font-semibold">Reliance Jio Expansion</p>
+                    <p class="text-gray-400">Jio announces new 5G rollout plans...</p>
+                </div>
+            `;
+        }
+
+        // Watchlist Management
+        document.getElementById('addTicker').addEventListener('click', async () => {
+            const tickerInput = document.getElementById('newTicker');
+            const ticker = tickerInput.value.trim().toUpperCase();
+            if (!ticker || watchlist.includes(ticker)) return;
+
+            const data = await fetchStockData(ticker);
+            if (data && data[0]) {
+                watchlist.push(ticker);
+                const watchlistDiv = document.getElementById('watchlist');
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center animate-slide-in';
+                item.dataset.ticker = ticker;
+                item.innerHTML = `
+                    <p>${ticker}</p>
+                    <div class="flex items-center space-x-2">
+                        <p id="watchlistPrice-${ticker}">₹${data[0].regularMarketPrice.toFixed(2)}</p>
+                        <button class="remove-ticker text-red-400 hover:text-red-600" data-ticker="${ticker}">✕</button>
+                    </div>
+                `;
+                watchlistDiv.appendChild(item);
+                tickerInput.value = '';
+                bindRemoveTickerEvents();
+            } else {
+                alert('Invalid ticker or data unavailable.');
+            }
+        });
+
+        function bindRemoveTickerEvents() {
+            document.querySelectorAll('.remove-ticker').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const ticker = btn.dataset.ticker;
+                    watchlist = watchlist.filter(t => t !== ticker);
+                    document.querySelector(`[data-ticker="${ticker}"]`).remove();
+                });
+            });
+        }
+
+        async function updateWatchlistPrices() {
+            const data = await fetchStockData(watchlist.join(','));
+            if (data) {
+                data.forEach(quote => {
+                    const price = quote.regularMarketPrice.toFixed(2);
+                    const element = document.getElementById(`watchlistPrice-${quote.symbol}`);
+                    if (element) element.textContent = `₹${price}`;
+                });
+            }
+        }
+
+        // Portfolio Management
+        document.getElementById('buyStock').addEventListener('click', async () => {
+            const ticker = document.getElementById('portfolioTicker').value.trim().toUpperCase();
+            const shares = parseInt(document.getElementById('portfolioShares').value);
+            const price = parseFloat(document.getElementById('portfolioPrice').value);
+
+            if (!ticker || !shares || !price) return;
+
+            const data = await fetchStockData(ticker);
+            if (data && data[0]) {
+                portfolio.push({ ticker, shares, buyPrice: price, currentPrice: data[0].regularMarketPrice });
+                updatePortfolioUI();
+                document.getElementById('portfolioTicker').value = '';
+                document.getElementById('portfolioShares').value = '';
+                document.getElementById('portfolioPrice').value = '';
+            } else {
+                alert('Invalid ticker or data unavailable.');
+            }
+        });
+
+        document.getElementById('sellStock').addEventListener('click', () => {
+            const ticker = document.getElementById('sellTicker').value.trim().toUpperCase();
+            const shares = parseInt(document.getElementById('sellShares').value);
+
+            if (!ticker || !shares) return;
+
+            const index = portfolio.findIndex(p => p.ticker === ticker && p.shares >= shares);
+            if (index !== -1) {
+                portfolio[index].shares -= shares;
+                if (portfolio[index].shares === 0) portfolio.splice(index, 1);
+                updatePortfolioUI();
+                document.getElementById('sellTicker').value = '';
+                document.getElementById('sellShares').value = '';
+            } else {
+                alert('Invalid ticker or insufficient shares.');
+            }
+        });
+
+        function updatePortfolioUI() {
+            const portfolioDiv = document.getElementById('portfolio');
+            portfolioDiv.innerHTML = portfolio.map(p => `
+                <div class="flex justify-between items-center animate-slide-in">
+                    <p>${p.ticker}</p>
+                    <p>${p.shares} shares @ ₹${p.buyPrice.toFixed(2)} (Current: ₹${p.currentPrice.toFixed(2)})</p>
+                </div>
+            `).join('');
+            updatePortfolioValue();
+        }
+
+        async function updatePortfolioValue() {
+            let totalValue = 0;
+            for (const p of portfolio) {
+                const data = await fetchStockData(p.ticker);
+                if (data && data[0]) {
+                    p.currentPrice = data[0].regularMarketPrice;
+                    totalValue += p.shares * p.currentPrice;
+                }
+            }
+            document.getElementById('portfolioValue').textContent = `₹${totalValue.toFixed(2)}`;
+            updatePortfolioUI();
+        }
+
+        // Chart Range Selection
+        document.querySelectorAll('.range-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentRange = btn.dataset.range;
+                priceHistory[currentRange] = priceHistory[currentRange].slice(-1); // Reset for new range
+                updateChart(priceHistory[currentRange][0]?.price || 0, currentRange);
+            });
+        });
+
+        // Initialize
+        window.onload = async () => {
+            initChart();
+            const data = await fetchStockData('RELIANCE.NS');
+            if (data) {
+                updateStockUI(data);
+                updateChart(data[0].regularMarketPrice, currentRange);
+            }
+            updateNews();
+            simulateWebSocket();
+            bindRemoveTickerEvents();
+        };
+    </script>
+</body>
+</html>
